@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "citation",
+  "title": "Citation",
+  "description": "A citation object referencing a specific chunk within a document",
+  "type": "object",
+  "required": ["doc_id", "chunk_id", "text_snippet"],
+  "properties": {
+    "doc_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "UUID of the source document"
+    },
+    "chunk_id": {
+      "type": "string",
+      "description": "Identifier for the specific chunk within the document (format: {doc_id}_{chunk_index})"
+    },
+    "text_snippet": {
+      "type": "string",
+      "description": "Excerpt from the chunk relevant to the response"
+    },
+    "page": {
+      "type": ["integer", "null"],
+      "minimum": 1,
+      "description": "Page number within the source document (null if not applicable)"
+    },
+    "file_name": {
+      "type": "string",
+      "description": "Original file name of the source document"
+    },
+    "source_type": {
+      "type": "string",
+      "enum": ["internal", "web", "legal_db"],
+      "description": "Origin of the citation"
+    }
+  },
+  "additionalProperties": false
+}

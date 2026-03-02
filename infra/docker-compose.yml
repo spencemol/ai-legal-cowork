@@ -1,0 +1,46 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: legal-ai-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-legal_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-legal_password}
+      POSTGRES_DB: ${POSTGRES_DB:-legal_ai}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-legal_user} -d ${POSTGRES_DB:-legal_ai}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  mongodb:
+    image: mongo:7-jammy
+    container_name: legal-ai-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-legal_user}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-legal_password}
+      MONGO_INITDB_DATABASE: ${MONGO_DB:-legal_ai_checkpoints}
+    ports:
+      - "${MONGO_PORT:-27017}:27017"
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+volumes:
+  postgres_data:
+    driver: local
+  mongodb_data:
+    driver: local
