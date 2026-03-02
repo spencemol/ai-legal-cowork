@@ -32,11 +32,11 @@ Tauri Desktop App (React + TypeScript)
 | Layer | Technology |
 |-------|------------|
 | Desktop | Tauri 2 + React 18 + TypeScript 5 + Zustand |
-| REST API | Fastify 5 + TypeScript (strict) + Prisma 5 + Zod 4 |
+| REST API | Fastify 5 + TypeScript (strict) + Prisma 5 + Zod 4 ([details](api/README.md)) |
 | Agent Backend | FastAPI + Python 3.12 + LangGraph |
 | Databases | PostgreSQL 16 · MongoDB 7 · Pinecone |
 | Auth | JWT (@fastify/jwt) + bcrypt |
-| Testing | Vitest 2 (Node/React) · Pytest 8 (Python) |
+| Testing | Vitest 4 (Node/React) · Pytest 8 (Python) |
 | Linting | ESLint + Prettier (TS) · Ruff (Python) |
 | Infrastructure | Docker Compose · Apache Airflow (planned) |
 
@@ -46,7 +46,7 @@ Tauri Desktop App (React + TypeScript)
 
 ```
 ai-legal-cowork/
-├── api/                         # Node REST API (Fastify + TypeScript)
+├── api/                         # Node REST API (Fastify + TypeScript) — [README](api/README.md)
 │   ├── src/
 │   │   ├── server.ts            # Fastify app factory + error handler
 │   │   ├── db.ts                # Prisma client singleton
@@ -68,6 +68,7 @@ ai-legal-cowork/
 │   ├── tests/                   # Vitest test suite (9 test files)
 │   ├── prisma/
 │   │   └── schema.prisma        # 9 models, 6 enums
+│   ├── Makefile                 # make test, make lint, make test-watch, etc.
 │   └── Dockerfile
 ├── agents/                      # Python agent backend (FastAPI)
 │   ├── app/
@@ -316,6 +317,8 @@ cd infra && docker compose up -d    # Postgres 16 + MongoDB 7
 ```
 
 ### Node REST API
+
+See [api/README.md](api/README.md) for full details.
 
 ```bash
 cd api
