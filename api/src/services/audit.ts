@@ -1,3 +1,4 @@
+import type { AuditLog } from '@prisma/client'
 import { prisma } from '../db'
 
 interface LogEventParams {
@@ -8,7 +9,7 @@ interface LogEventParams {
   metadata?: Record<string, unknown>
 }
 
-export async function logEvent(params: LogEventParams) {
+export async function logEvent(params: LogEventParams): Promise<AuditLog> {
   return prisma.auditLog.create({
     data: {
       user_id: params.userId,

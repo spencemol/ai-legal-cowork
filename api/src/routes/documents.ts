@@ -15,7 +15,8 @@ export default async function documentsRoutes(fastify: FastifyInstance): Promise
       const { id: matter_id } = request.params as { id: string }
       const parsed = RegisterDocumentSchema.safeParse(request.body)
       if (!parsed.success) {
-        return reply.code(400).send({ message: 'Validation error', errors: parsed.error.errors })
+        const errors: unknown[] = parsed.error.errors
+        return reply.code(400).send({ message: 'Validation error', errors })
       }
       const user = request.user as { id: string }
       const doc = await prisma.document.create({
@@ -52,9 +53,11 @@ export default async function documentsRoutes(fastify: FastifyInstance): Promise
       const { id } = request.params as { id: string }
       const parsed = UpdateDocumentStatusSchema.safeParse(request.body)
       if (!parsed.success) {
-        return reply.code(400).send({ message: 'Validation error', errors: parsed.error.errors })
+        const errors: unknown[] = parsed.error.errors
+        return reply.code(400).send({ message: 'Validation error', errors })
       }
-      const doc = await prisma.document.update({ where: { id }, data: { status: parsed.data.status } })
+      const { status } = parsed.data
+      const doc = await prisma.document.update({ where: { id }, data: { status } })
       return reply.code(200).send(doc)
     },
   )

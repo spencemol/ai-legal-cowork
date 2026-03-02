@@ -5,7 +5,8 @@
  *   - Dynamic import of '../src/services/audit' will throw "Cannot find module"
  *     until task 1.18 creates src/services/audit.ts
  */
-import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { logEvent } from '../src/services/audit'
 
 const { mockPrisma } = vi.hoisted(() => {
   return {
@@ -38,9 +39,6 @@ beforeEach(() => {
 
 describe('logEvent (src/services/audit.ts)', () => {
   it('calls prisma.auditLog.create with correct shape', async () => {
-    // This dynamic import will fail until src/services/audit.ts is created (task 1.18)
-    const { logEvent } = await import('../src/services/audit')
-
     await logEvent({
       userId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
       action: 'VIEW_DOCUMENT',
@@ -63,7 +61,6 @@ describe('logEvent (src/services/audit.ts)', () => {
   })
 
   it('stores metadata as JSON', async () => {
-    const { logEvent } = await import('../src/services/audit')
     const metadata = { fileName: 'brief.pdf', piiAccessed: true, fields: ['name', 'ssn'] }
 
     await logEvent({
@@ -82,8 +79,6 @@ describe('logEvent (src/services/audit.ts)', () => {
   })
 
   it('allows null metadata (optional field)', async () => {
-    const { logEvent } = await import('../src/services/audit')
-
     await expect(
       logEvent({
         userId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
@@ -95,8 +90,6 @@ describe('logEvent (src/services/audit.ts)', () => {
   })
 
   it('returns the created audit log entry', async () => {
-    const { logEvent } = await import('../src/services/audit')
-
     const result = await logEvent({
       userId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
       action: 'VIEW_DOCUMENT',
@@ -109,9 +102,4 @@ describe('logEvent (src/services/audit.ts)', () => {
       resource_type: 'document',
     })
   })
-})
-
-beforeAll(() => {
-  // Reset module cache so each test gets a fresh import
-  vi.resetModules()
 })

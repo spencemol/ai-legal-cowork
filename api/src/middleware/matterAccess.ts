@@ -23,12 +23,12 @@ export function requireMatterAccess(options: MatterAccessOptions = {}) {
     })
 
     if (!assignment) {
-      reply.code(403).send({ message: 'Forbidden: not assigned to this matter' })
+      void reply.code(403).send({ message: 'Forbidden: not assigned to this matter' })
       return
     }
 
     if (options.writeAccess && assignment.access_level === 'read_only') {
-      reply.code(403).send({ message: 'Forbidden: read-only access level' })
+      void reply.code(403).send({ message: 'Forbidden: read-only access level' })
     }
   }
 }

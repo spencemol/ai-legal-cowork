@@ -9,9 +9,9 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
   fastify.post('/register', async (request, reply) => {
     const parsed = RegisterSchema.safeParse(request.body)
     if (!parsed.success) {
-      return reply.code(400).send({ message: 'Validation error', errors: parsed.error.errors })
+      const errors: unknown[] = parsed.error.errors
+      return reply.code(400).send({ message: 'Validation error', errors })
     }
-
     const { email, password, name, role } = parsed.data
     const password_hash = await hashPassword(password)
 
@@ -36,9 +36,9 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
   fastify.post('/login', async (request, reply) => {
     const parsed = LoginSchema.safeParse(request.body)
     if (!parsed.success) {
-      return reply.code(400).send({ message: 'Validation error', errors: parsed.error.errors })
+      const errors: unknown[] = parsed.error.errors
+      return reply.code(400).send({ message: 'Validation error', errors })
     }
-
     const { email, password } = parsed.data
 
     const user = await prisma.user.findUnique({ where: { email } })

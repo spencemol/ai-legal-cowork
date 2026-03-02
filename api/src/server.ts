@@ -16,7 +16,8 @@ function errorHandler(
   reply: FastifyReply,
 ): void {
   if (error instanceof ZodError) {
-    void reply.code(400).send({ message: 'Validation error', errors: error.errors })
+    const errors: unknown[] = error.issues
+    void reply.code(400).send({ message: 'Validation error', errors })
     return
   }
 

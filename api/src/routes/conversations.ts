@@ -15,7 +15,8 @@ export default async function conversationsRoutes(fastify: FastifyInstance): Pro
       const { id: matter_id } = request.params as { id: string }
       const parsed = CreateConversationSchema.safeParse(request.body)
       if (!parsed.success) {
-        return reply.code(400).send({ message: 'Validation error', errors: parsed.error.errors })
+        const errors: unknown[] = parsed.error.errors
+        return reply.code(400).send({ message: 'Validation error', errors })
       }
       const user = request.user as { id: string }
       const conversation = await prisma.conversation.create({
@@ -55,7 +56,8 @@ export default async function conversationsRoutes(fastify: FastifyInstance): Pro
       const { id: conversation_id } = request.params as { id: string }
       const parsed = CreateMessageSchema.safeParse(request.body)
       if (!parsed.success) {
-        return reply.code(400).send({ message: 'Validation error', errors: parsed.error.errors })
+        const errors: unknown[] = parsed.error.errors
+        return reply.code(400).send({ message: 'Validation error', errors })
       }
       const message = await prisma.message.create({
         data: { ...parsed.data, conversation_id },
