@@ -12,24 +12,49 @@ import jwt from 'jsonwebtoken'
 
 // --- Prisma mock (hoisted so factory can close over it) ---
 const { mockPrisma } = vi.hoisted(() => {
+  // Pre-computed bcrypt hash of 'correctpassword' (rounds=10) for login tests
+  const CORRECT_PW_HASH = '$2b$10$dIFQ7eVzFe5uxxVpz1AK6O7Z8B2rE5Z.2Z11Zzbwq.cY.Ee3dVuRW'
+
   const baseUser = {
     id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
     email: 'attorney@firm.com',
     name: 'Test Attorney',
     role: 'attorney',
-    password_hash: '$2a$12$placeholder_hash',
+    password_hash: CORRECT_PW_HASH,
     sso_provider: null,
     sso_id: null,
     created_at: new Date('2024-01-01T00:00:00Z'),
     updated_at: new Date('2024-01-01T00:00:00Z'),
   }
+
+  const baseMatter = {
+    id: '11111111-1111-1111-1111-111111111111',
+    name: 'Test Matter',
+    status: 'active',
+    created_by_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    created_at: new Date('2024-01-01T00:00:00Z'),
+    updated_at: new Date('2024-01-01T00:00:00Z'),
+  }
+
   return {
     mockPrisma: {
       user: {
-        create: vi.fn().mockResolvedValue(baseUser),
+        // Returns the input data merged with defaults so email echoes back correctly
+        create: vi.fn().mockImplementation(
+          async ({ data }: { data: Record<string, unknown> }) => ({
+            ...baseUser,
+            ...data,
+          }),
+        ),
         findUnique: vi.fn().mockResolvedValue(baseUser),
         findMany: vi.fn().mockResolvedValue([baseUser]),
         update: vi.fn().mockResolvedValue(baseUser),
+      },
+      matter: {
+        create: vi.fn().mockResolvedValue(baseMatter),
+        findUnique: vi.fn().mockResolvedValue(baseMatter),
+        findMany: vi.fn().mockResolvedValue([baseMatter]),
+        update: vi.fn().mockResolvedValue(baseMatter),
       },
     },
   }

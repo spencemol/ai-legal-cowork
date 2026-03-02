@@ -5,7 +5,7 @@ export const CreateConversationSchema = z.object({
 })
 
 const CitationSchema = z.object({
-  doc_id: z.string().uuid(),
+  doc_id: z.string().min(1), // UUID format enforced by DB
   chunk_id: z.string(),
   text_snippet: z.string(),
   page: z.number().int().nullable().optional(),

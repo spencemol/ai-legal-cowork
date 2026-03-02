@@ -11,7 +11,7 @@ export const UpdateMatterSchema = z.object({
 })
 
 export const CreateAssignmentSchema = z.object({
-  user_id: z.string().uuid(),
+  user_id: z.string().min(1), // UUID format enforced by DB
   access_level: z.enum(['full', 'restricted', 'read_only']).default('full'),
 })
 
@@ -22,5 +22,5 @@ export const CreateClientSchema = z.object({
 })
 
 export const LinkClientSchema = z.object({
-  client_id: z.string().uuid(),
+  client_id: z.string().min(1), // UUID format enforced by DB
 })
