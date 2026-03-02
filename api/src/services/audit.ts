@@ -1,4 +1,4 @@
-import type { AuditLog } from '@prisma/client'
+import type { AuditLog, Prisma } from '@prisma/client'
 import { prisma } from '../db'
 
 interface LogEventParams {
@@ -6,7 +6,7 @@ interface LogEventParams {
   action: string
   resourceType: string
   resourceId: string
-  metadata?: Record<string, unknown>
+  metadata?: Prisma.InputJsonValue
 }
 
 export async function logEvent(params: LogEventParams): Promise<AuditLog> {

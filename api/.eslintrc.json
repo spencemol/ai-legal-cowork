@@ -21,7 +21,7 @@
   "ignorePatterns": ["dist/", "node_modules/", "*.js"],
   "overrides": [
     {
-      "files": ["tests/**/*.ts"],
+      "files": ["tests/**/*.ts", "src/routes/**/*.ts"],
       "rules": {
         "@typescript-eslint/no-unsafe-assignment": "off"
       }

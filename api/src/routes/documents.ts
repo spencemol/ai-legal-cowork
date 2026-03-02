@@ -15,7 +15,7 @@ export default async function documentsRoutes(fastify: FastifyInstance): Promise
       const { id: matter_id } = request.params as { id: string }
       const parsed = RegisterDocumentSchema.safeParse(request.body)
       if (!parsed.success) {
-        const errors: unknown[] = parsed.error.errors
+        const errors: unknown[] = parsed.error.issues
         return reply.code(400).send({ message: 'Validation error', errors })
       }
       const user = request.user as { id: string }
@@ -53,7 +53,7 @@ export default async function documentsRoutes(fastify: FastifyInstance): Promise
       const { id } = request.params as { id: string }
       const parsed = UpdateDocumentStatusSchema.safeParse(request.body)
       if (!parsed.success) {
-        const errors: unknown[] = parsed.error.errors
+        const errors: unknown[] = parsed.error.issues
         return reply.code(400).send({ message: 'Validation error', errors })
       }
       const { status } = parsed.data

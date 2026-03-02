@@ -9,7 +9,7 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
   fastify.post('/register', async (request, reply) => {
     const parsed = RegisterSchema.safeParse(request.body)
     if (!parsed.success) {
-      const errors: unknown[] = parsed.error.errors
+      const errors: unknown[] = parsed.error.issues
       return reply.code(400).send({ message: 'Validation error', errors })
     }
     const { email, password, name, role } = parsed.data
@@ -36,7 +36,7 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
   fastify.post('/login', async (request, reply) => {
     const parsed = LoginSchema.safeParse(request.body)
     if (!parsed.success) {
-      const errors: unknown[] = parsed.error.errors
+      const errors: unknown[] = parsed.error.issues
       return reply.code(400).send({ message: 'Validation error', errors })
     }
     const { email, password } = parsed.data

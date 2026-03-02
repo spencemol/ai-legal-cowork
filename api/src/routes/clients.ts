@@ -11,7 +11,7 @@ export default async function clientsRoutes(fastify: FastifyInstance): Promise<v
   fastify.post('/clients', { preHandler: [authenticate] }, async (request, reply) => {
     const parsed = CreateClientSchema.safeParse(request.body)
     if (!parsed.success) {
-      const errors: unknown[] = parsed.error.errors
+      const errors: unknown[] = parsed.error.issues
       return reply.code(400).send({ message: 'Validation error', errors })
     }
     const client = await prisma.client.create({ data: parsed.data })
@@ -36,7 +36,7 @@ export default async function clientsRoutes(fastify: FastifyInstance): Promise<v
       const { id: matter_id } = request.params as { id: string }
       const parsed = LinkClientSchema.safeParse(request.body)
       if (!parsed.success) {
-        const errors: unknown[] = parsed.error.errors
+        const errors: unknown[] = parsed.error.issues
         return reply.code(400).send({ message: 'Validation error', errors })
       }
       const { client_id } = parsed.data

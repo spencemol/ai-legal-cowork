@@ -19,7 +19,7 @@ export default async function mattersRoutes(fastify: FastifyInstance): Promise<v
   fastify.post('/matters', { preHandler: authAttorney }, async (request, reply) => {
     const parsed = CreateMatterSchema.safeParse(request.body)
     if (!parsed.success) {
-      const errors: unknown[] = parsed.error.errors
+      const errors: unknown[] = parsed.error.issues
       return reply.code(400).send({ message: 'Validation error', errors })
     }
     const user = request.user as { id: string }
@@ -55,7 +55,7 @@ export default async function mattersRoutes(fastify: FastifyInstance): Promise<v
       const { id } = request.params as { id: string }
       const parsed = UpdateMatterSchema.safeParse(request.body)
       if (!parsed.success) {
-        const errors: unknown[] = parsed.error.errors
+        const errors: unknown[] = parsed.error.issues
         return reply.code(400).send({ message: 'Validation error', errors })
       }
       const matter = await prisma.matter.update({ where: { id }, data: parsed.data })
@@ -73,7 +73,7 @@ export default async function mattersRoutes(fastify: FastifyInstance): Promise<v
       const { id: matter_id } = request.params as { id: string }
       const parsed = CreateAssignmentSchema.safeParse(request.body)
       if (!parsed.success) {
-        const errors: unknown[] = parsed.error.errors
+        const errors: unknown[] = parsed.error.issues
         return reply.code(400).send({ message: 'Validation error', errors })
       }
       const assignment = await prisma.matterAssignment.create({
