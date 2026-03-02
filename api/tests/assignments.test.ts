@@ -37,7 +37,7 @@ const { mockPrisma } = vi.hoisted(() => {
 })
 
 vi.mock('@prisma/client', () => ({
-  PrismaClient: vi.fn(() => mockPrisma),
+  PrismaClient: vi.fn(function () { return mockPrisma }),
 }))
 
 beforeAll(() => {
