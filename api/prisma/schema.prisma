@@ -6,3 +6,175 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  attorney
+  paralegal
+  partner
+}
+
+enum AccessLevel {
+  full
+  restricted
+  read_only
+}
+
+enum MatterStatus {
+  active
+  closed
+  archived
+}
+
+enum DocumentStatus {
+  pending
+  processing
+  indexed
+  failed
+}
+
+enum MessageRole {
+  user
+  assistant
+}
+
+enum ClientRole {
+  plaintiff
+  defendant
+  third_party
+  other
+}
+
+// ─── Models ──────────────────────────────────────────────────────────────────
+
+/// Task 1.1 — users
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  name          String
+  role          UserRole
+  password_hash String?
+  sso_provider  String?
+  sso_id        String?
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  created_matters    Matter[]           @relation("MatterCreator")
+  assignments        MatterAssignment[]
+  documents_uploaded Document[]
+  conversations      Conversation[]
+  audit_logs         AuditLog[]
+}
+
+/// Task 1.7 — matters
+model Matter {
+  id            String       @id @default(uuid())
+  name          String
+  status        MatterStatus @default(active)
+  created_by_id String
+  created_at    DateTime     @default(now())
+  updated_at    DateTime     @updatedAt
+
+  created_by     User               @relation("MatterCreator", fields: [created_by_id], references: [id])
+  assignments    MatterAssignment[]
+  matter_clients MatterClient[]
+  documents      Document[]
+  conversations  Conversation[]
+}
+
+/// Task 1.7 — clients
+model Client {
+  id         String     @id @default(uuid())
+  name       String
+  email      String?
+  role       ClientRole @default(other)
+  created_at DateTime   @default(now())
+  updated_at DateTime   @updatedAt
+
+  matter_clients MatterClient[]
+}
+
+/// Task 1.7 — matter_clients (junction)
+model MatterClient {
+  id        String   @id @default(uuid())
+  matter_id String
+  client_id String
+  linked_at DateTime @default(now())
+
+  matter Matter @relation(fields: [matter_id], references: [id], onDelete: Cascade)
+  client Client @relation(fields: [client_id], references: [id], onDelete: Cascade)
+
+  @@unique([matter_id, client_id])
+}
+
+/// Task 1.7 — matter_assignments
+model MatterAssignment {
+  id           String      @id @default(uuid())
+  matter_id    String
+  user_id      String
+  access_level AccessLevel @default(full)
+  assigned_at  DateTime    @default(now())
+
+  matter Matter @relation(fields: [matter_id], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([matter_id, user_id])
+}
+
+/// Task 1.13 — documents
+model Document {
+  id             String         @id @default(uuid())
+  matter_id      String
+  file_name      String
+  file_path      String
+  file_size      Int
+  mime_type      String
+  sha256_hash    String
+  status         DocumentStatus @default(pending)
+  uploaded_by_id String
+  created_at     DateTime       @default(now())
+  updated_at     DateTime       @updatedAt
+
+  matter      Matter @relation(fields: [matter_id], references: [id], onDelete: Cascade)
+  uploaded_by User   @relation(fields: [uploaded_by_id], references: [id])
+}
+
+/// Task 1.15 — conversations
+model Conversation {
+  id            String   @id @default(uuid())
+  matter_id     String
+  title         String
+  created_by_id String
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  matter     Matter    @relation(fields: [matter_id], references: [id], onDelete: Cascade)
+  created_by User      @relation(fields: [created_by_id], references: [id])
+  messages   Message[]
+}
+
+/// Task 1.15 — messages (with citations JSONB)
+model Message {
+  id              String      @id @default(uuid())
+  conversation_id String
+  role            MessageRole
+  content         String
+  citations       Json?
+  created_at      DateTime    @default(now())
+
+  conversation Conversation @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+}
+
+/// Task 1.17 — audit_logs
+model AuditLog {
+  id            String   @id @default(uuid())
+  user_id       String
+  action        String
+  resource_type String
+  resource_id   String
+  metadata      Json?
+  created_at    DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [id])
+}
