@@ -171,7 +171,10 @@ ai-legal-cowork/
 │   └── constants/
 │       └── roles.ts
 ├── infra/
-│   └── docker-compose.yml       # Postgres 16 + MongoDB 7
+│   ├── docker-compose.yml       # Postgres 16 + MongoDB 7 + Node API + Python Agents
+│   ├── .env.example             # All environment variables documented
+│   └── scripts/
+│       └── seed.py              # Seed script: user, matter, assignment, document
 ├── spec.md                      # Product specification
 ├── plan.md                      # System design & architecture
 ├── tasks.md                     # Phase-level task breakdown
@@ -403,9 +406,20 @@ All Phase 5 tasks (5.1–5.15) are implemented and tested. See [docs/phases/phas
 - [x] Conversation search — real-time title/content filter
 - [x] 73 component + store + service tests (13 files, all passing)
 
-### Phase 6: End-to-End Integration — NOT STARTED
+### Phase 6: End-to-End Integration — COMPLETE
 
-Full vertical slice: login → select matter → ask question → streamed cited response.
+All Phase 6 tasks (6.1–6.9) are implemented and tested. See [docs/phases/phase_6.md](docs/phases/phase_6.md) for full details.
+
+- [x] Docker Compose updated with `api` + `agents` services, health checks, dependency ordering (Task 6.1)
+- [x] Shared JWT secret via `JWT_SECRET` env var; contract tests verify Node API and agents accept same token (Task 6.2)
+- [x] Seed script (`infra/scripts/seed.py`) — register user, create matter, assign, register document (Task 6.3)
+- [x] E2E desktop tests: authenticated chat flow, SSE tokens, citation rendering (Task 6.4)
+- [x] E2E desktop tests: citation click → DocumentViewer with correct chunk (Task 6.5)
+- [x] Cross-matter access control: unauthorized matter_id → 403 at route level + empty at retriever level (Task 6.6)
+- [x] PII E2E flow: redacted before LLM, re-hydrated by access level; full/restricted/read_only verified (Task 6.7)
+- [x] Conversation resume tests: previous messages loaded from API, new messages append (Task 6.8)
+- [x] Audit log E2E: PII_ACCESS, VIEW_DOCUMENT, CHAT_QUERY events with full schema (Task 6.9)
+- [x] 90 new E2E tests (51 agents + 14 API + 25 desktop; 489 total across all suites)
 
 ### Phase 7: Research & Drafting Agents — NOT STARTED
 

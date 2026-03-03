@@ -39,6 +39,73 @@ services:
       retries: 5
       start_period: 15s
 
+  api:
+    build:
+      context: ../api
+      dockerfile: Dockerfile
+    container_name: legal-ai-api
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-legal_user}:${POSTGRES_PASSWORD:-legal_password}@postgres:5432/${POSTGRES_DB:-legal_ai}
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-use-32-char-min}
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: "3000"
+    ports:
+      - "${API_PORT:-3000}:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  agents:
+    build:
+      context: ../agents
+      dockerfile: Dockerfile
+    container_name: legal-ai-agents
+    restart: unless-stopped
+    environment:
+      # Shared secret — MUST match the API service
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-use-32-char-min}
+      # Database connections
+      DATABASE_URL: postgresql://${POSTGRES_USER:-legal_user}:${POSTGRES_PASSWORD:-legal_password}@postgres:5432/${POSTGRES_DB:-legal_ai}
+      MONGO_URI: mongodb://${MONGO_USER:-legal_user}:${MONGO_PASSWORD:-legal_password}@mongodb:27017/${MONGO_DB:-legal_ai_checkpoints}?authSource=admin
+      # Vector store
+      PINECONE_API_KEY: ${PINECONE_API_KEY:-}
+      PINECONE_INDEX: ${PINECONE_INDEX:-legal-docs}
+      # LLM
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-claude-3-5-sonnet-20241022}
+      LLM_TEMPERATURE: ${LLM_TEMPERATURE:-0.0}
+      LLM_MAX_TOKENS: ${LLM_MAX_TOKENS:-1024}
+      # Embeddings
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-all-MiniLM-L6-v2}
+      # Observability (optional)
+      LANGCHAIN_API_KEY: ${LANGCHAIN_API_KEY:-}
+      LANGCHAIN_TRACING_V2: ${LANGCHAIN_TRACING_V2:-false}
+      LANGCHAIN_PROJECT: ${LANGCHAIN_PROJECT:-legal-ai-tool}
+      # Node API base URL (for MCP tool calls from agents)
+      API_BASE_URL: http://api:3000
+    ports:
+      - "${AGENTS_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
 volumes:
   postgres_data:
     driver: local
