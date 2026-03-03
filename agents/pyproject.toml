@@ -6,13 +6,32 @@ requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.32.0",
+    "httpx>=0.27.0",
+    "pydantic>=2.0.0",
+]
+
+# Production ML/RAG dependencies (heavy — install separately in production):
+#   uv sync --extra ml
+# Combines all extras:
+#   uv sync --extra all
+[project.optional-dependencies]
+ml = [
+    # Embeddings: pulls in PyTorch (~500 MB on macOS arm64)
+    "sentence-transformers>=3.0.0",
+]
+rag = [
+    "pinecone>=5.0.0",
+    "llama-parse>=0.5.0",
+]
+all = [
+    "legal-ai-tool-agents[ml,rag]",
 ]
 
 [dependency-groups]
 dev = [
     "pytest>=8.3.0",
     "pytest-asyncio>=0.24.0",
-    "httpx>=0.27.0",
+    "pytest-mock>=3.14.0",
     "ruff>=0.7.0",
 ]
 

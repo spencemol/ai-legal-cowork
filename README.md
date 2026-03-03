@@ -62,19 +62,48 @@ ai-legal-cowork/
 │   │   │   ├── clients.ts       # Client CRUD + matter linking
 │   │   │   ├── documents.ts     # Document registry + status
 │   │   │   └── conversations.ts # Conversations + messages
+│   │   ├── mcp/                 # MCP server layer (Phase 2)
+│   │   │   ├── server.ts        # createMcpServer() factory (McpServer)
+│   │   │   └── tools/
+│   │   │       ├── matters.ts       # get_matter, list_matters, get_matter_assignments
+│   │   │       ├── clients.ts       # get_client, list_clients_for_matter
+│   │   │       ├── documents.ts     # list_documents_for_matter, get_document
+│   │   │       ├── conversations.ts # get_conversation, save_message
+│   │   │       └── audit.ts         # log_audit_event
 │   │   ├── schemas/             # Zod validation schemas
 │   │   └── services/
 │   │       └── audit.ts         # Audit log service
-│   ├── tests/                   # Vitest test suite (9 test files)
+│   ├── tests/                   # Vitest test suite (10 test files, 113 tests)
 │   ├── prisma/
 │   │   └── schema.prisma        # 9 models, 6 enums
 │   ├── Makefile                 # make test, make lint, make test-watch, etc.
 │   └── Dockerfile
-├── agents/                      # Python agent backend (FastAPI)
+├── agents/                      # Python agent backend (FastAPI) — [README](agents/README.md)
 │   ├── app/
-│   │   └── main.py              # FastAPI scaffold + /health
+│   │   ├── main.py              # FastAPI app + route registration
+│   │   ├── rag/                 # Ingestion pipeline (Phase 3)
+│   │   │   ├── models.py        # Pydantic models (PageContent, TextChunk, VectorRecord…)
+│   │   │   ├── hasher.py        # SHA-256 file hasher
+│   │   │   ├── parser.py        # LlamaParse wrapper
+│   │   │   ├── chunker.py       # Sentence-boundary chunker + ChunkConfig
+│   │   │   ├── embedder.py      # all-MiniLM-L6-v2 embedding wrapper
+│   │   │   ├── pinecone_store.py # Pinecone batched upsert
+│   │   │   ├── api_client.py    # Node REST API HTTP client
+│   │   │   └── ingestion.py     # End-to-end pipeline orchestration
+│   │   └── routes/
+│   │       └── ingest.py        # POST /ingest endpoint
 │   ├── tests/
-│   │   └── test_health.py       # Health check tests
+│   │   ├── test_health.py
+│   │   └── ingestion/           # Phase 3 test suite (66 tests)
+│   │       ├── conftest.py
+│   │       ├── test_hasher.py
+│   │       ├── test_chunker.py
+│   │       ├── test_embedder.py
+│   │       ├── test_parser.py
+│   │       ├── test_pinecone_store.py
+│   │       ├── test_api_client.py
+│   │       ├── test_ingestion_integration.py
+│   │       └── test_ingest_endpoint.py
 │   ├── pyproject.toml
 │   └── Dockerfile
 ├── desktop/                     # Tauri 2 + React desktop app
@@ -136,9 +165,25 @@ ai-legal-cowork/
 
 ---
 
+## MCP Server Layer
+
+The Node REST API doubles as an **MCP server**, exposing 10 tools so the Python agent backend can query structured data (matters, clients, documents, conversations) and write audit logs from within LangGraph agents — without coupling the agent code to raw REST calls.
+
+| Tool group | Tools |
+|------------|-------|
+| Matters | `get_matter` · `list_matters` · `get_matter_assignments` |
+| Clients | `get_client` · `list_clients_for_matter` |
+| Documents | `list_documents_for_matter` · `get_document` |
+| Conversations | `get_conversation` · `save_message` |
+| Audit | `log_audit_event` |
+
+See [api/README.md — MCP Server Layer](api/README.md#mcp-server-layer-phase-2) for full tool reference, design decisions, and test strategy.
+
+---
+
 ## Test Coverage
 
-### API (`api/tests/`) — 9 test files
+### API (`api/tests/`) — 10 test files, 113 tests
 
 | Test File | Coverage |
 |-----------|----------|
@@ -151,12 +196,21 @@ ai-legal-cowork/
 | `audit.test.ts` | Audit event logging, metadata storage |
 | `error-handling.test.ts` | Zod validation errors, global error handler |
 | `health.test.ts` | Server bootstrap |
+| `mcp-tools.test.ts` | All 10 MCP tools via InMemoryTransport (Tasks 2.1–2.7) |
 
-### Agents (`agents/tests/`) — 1 test file
+### Agents (`agents/tests/`) — 8 test files (68 tests)
 
 | Test File | Coverage |
 |-----------|----------|
 | `test_health.py` | FastAPI health endpoint |
+| `ingestion/test_hasher.py` | SHA-256 hasher: hex digest, determinism, empty file |
+| `ingestion/test_chunker.py` | Sentence chunker: max_chars, overlap, page numbers, edge cases |
+| `ingestion/test_embedder.py` | Embedder: 384-dim output, batch, injection, lazy model |
+| `ingestion/test_parser.py` | LlamaParse wrapper: pages, page numbers, file hash, empty doc |
+| `ingestion/test_pinecone_store.py` | Pinecone upsert: IDs, metadata, batching, empty input |
+| `ingestion/test_api_client.py` | REST API client: GET docs, register, status PATCH, camelCase payload |
+| `ingestion/test_ingestion_integration.py` | End-to-end pipeline: new file, dedup skip, failure → failed status, ingest_many counts |
+| `ingestion/test_ingest_endpoint.py` | POST /ingest: 200 schema, 422 validation, empty list |
 
 ### Desktop (`desktop/src/`) — 1 test file
 
@@ -190,25 +244,31 @@ All Phase 1 tasks (1.1–1.20) are implemented and tested:
 - [x] Global error handler (Zod → 400, unhandled → 500)
 - [x] Comprehensive test suite (9 test files, Prisma mocked)
 
-### Phase 2: MCP Server Layer — NOT STARTED
+### Phase 2: MCP Server Layer — COMPLETE
 
-Expose structured data through MCP for the Python agent backend.
+All Phase 2 tasks (2.1–2.7) are implemented and tested. See [api/README.md](api/README.md) for full details.
 
-- [ ] MCP server scaffold (`@modelcontextprotocol/sdk`)
-- [ ] MCP tools for matters, clients, documents, conversations
-- [ ] MCP tool for audit logging
-- [ ] Integration tests for MCP tools
+- [x] `createMcpServer()` factory (`api/src/mcp/server.ts`) using `McpServer` from `@modelcontextprotocol/sdk` v1.27
+- [x] Matter tools: `get_matter`, `list_matters`, `get_matter_assignments`
+- [x] Client tools: `get_client`, `list_clients_for_matter`
+- [x] Document tools: `list_documents_for_matter`, `get_document`
+- [x] Conversation tools: `get_conversation`, `save_message` (with optional citations JSONB)
+- [x] Audit tool: `log_audit_event` (with optional metadata and IP address)
+- [x] 25 integration tests via `InMemoryTransport` — Prisma mocked, no network required
 
-### Phase 3: Ingestion Pipeline — NOT STARTED
+### Phase 3: Ingestion Pipeline — COMPLETE
 
-Parse, chunk, embed, and index documents into Pinecone.
+All Phase 3 tasks (3.1–3.11) are implemented and tested.  See [agents/README.md](agents/README.md) for full details.
 
-- [ ] SHA-256 file hasher, LlamaParse parser, semantic chunker
-- [ ] Embedding module (all-MiniLM-L6-v2)
-- [ ] Pinecone upsert with metadata
-- [ ] Dedup check + document status tracking
-- [ ] End-to-end ingestion wiring
-- [ ] Manual refresh endpoint
+- [x] SHA-256 file hasher (`app/rag/hasher.py`) — deterministic dedup key
+- [x] LlamaParse document parser (`app/rag/parser.py`) — PDF → page-structured text, injected client for testability
+- [x] Sentence-boundary chunker (`app/rag/chunker.py`) — configurable `max_chars` / `overlap_chars`, `ChunkConfig`, page-number propagation
+- [x] Embedding module (`app/rag/embedder.py`) — `all-MiniLM-L6-v2` via sentence-transformers, lazy-loaded, injectable model for tests
+- [x] Pinecone upsert module (`app/rag/pinecone_store.py`) — batched upsert, `VectorIndex` Protocol, metadata per vector
+- [x] REST API client (`app/rag/api_client.py`) — document registration, hash-based dedup check, status updates
+- [x] End-to-end pipeline (`app/rag/ingestion.py`) — `ingest_document` + `ingest_many`, `pending → processing → indexed | failed` status flow
+- [x] `POST /ingest` endpoint (`app/routes/ingest.py`) — Pydantic-validated request, aggregated `IngestionResult` response
+- [x] 66 tests across 6 unit test files + 1 integration test file (all mocked: no Pinecone key, no LlamaParse key, no PyTorch required)
 
 ### Phase 4: Agent Backend Core — NOT STARTED
 
@@ -266,12 +326,12 @@ Traceability from [spec.md](spec.md) functional requirements to implementation s
 | FR-4.1 | Multi-step legal research | Phase 7 |
 | FR-4.2 | Cross-document synthesis | Phase 7 |
 | **FR-5** | Document Ingestion & RAG | |
-| FR-5.1 | Auto-ingest on startup/login | Phase 3 |
-| FR-5.2 | Manual refresh | Phase 3 |
-| FR-5.3 | Directory sync | Phase 3 |
-| FR-5.4 | LlamaParse PDF parsing | Phase 3 |
-| FR-5.5 | SHA-256 dedup | Phase 3 |
-| FR-5.6 | Embedding + Pinecone storage | Phase 3 |
+| FR-5.1 | Auto-ingest on startup/login | **Done** (`POST /ingest` + pipeline) |
+| FR-5.2 | Manual refresh | **Done** (`POST /ingest` endpoint) |
+| FR-5.3 | Directory sync | Phase 9 (Airflow DAG) |
+| FR-5.4 | LlamaParse PDF parsing | **Done** (`app/rag/parser.py`) |
+| FR-5.5 | SHA-256 dedup | **Done** (`app/rag/hasher.py` + dedup check) |
+| FR-5.6 | Embedding + Pinecone storage | **Done** (`app/rag/embedder.py` + `pinecone_store.py`) |
 | FR-5.7 | Airflow re-indexing | Phase 9 |
 | **FR-6** | Document Viewer | |
 | FR-6.1–6.4 | Split-view read-only viewer | Phase 5 |
@@ -292,7 +352,7 @@ Traceability from [spec.md](spec.md) functional requirements to implementation s
 | FR-9.5 | MongoDB checkpoints | Phase 4 |
 | **FR-10** | Structured Data | |
 | FR-10.1 | CRUD via Node REST API | **Done** |
-| FR-10.2 | MCP server layer | Phase 2 |
+| FR-10.2 | MCP server layer | **Done** (10 tools, 25 tests) |
 | **FR-11** | LLM Gateway | |
 | FR-11.1 | Claude API wrapper | Phase 4 |
 | FR-11.2 | Input sanitization | Phase 4 |
@@ -329,6 +389,8 @@ npm run dev                          # http://localhost:3000
 ```
 
 ### Python Agent Backend
+
+See [agents/README.md](agents/README.md) for full details, Makefile targets, and environment variable reference.
 
 ```bash
 cd agents
