@@ -440,7 +440,16 @@ All Phase 7 tasks (7.1–7.15) are implemented and tested. See [docs/phases/phas
 - [x] Orchestrator routes drafting intent — `DRAFTING` IntentType; "draft", "write an NDA", "generate document"
 - [x] 110 unit + integration tests (374 total agents tests, 599 total across all suites)
 
-### Phase 8: Desktop Research & Drafting UI — NOT STARTED
+### Phase 8: Desktop Research & Drafting UI — COMPLETE
+
+All Phase 8 tasks (8.1–8.5) are implemented and tested. See [docs/phases/phase_8.md](docs/phases/phase_8.md) for full details.
+
+- [x] Mixed citation badges (`components/Citations/ResearchCitationBadge.tsx`) — firm=blue "Internal", web=green "Web", legal DB=purple "Legal DB"; hover tooltips (Task 8.1)
+- [x] Document generation panel (`components/DocumentGenPanel/DocumentGenPanel.tsx`) — template dropdown (engagement_letter, NDA, motion, freeform), freeform prompt, Generate button (Task 8.2)
+- [x] Document download handler (`hooks/useDocumentDownload.ts`) — Tauri save dialog + file write; browser fallback; cancel + error handling (Task 8.3)
+- [x] Export format selector (`components/DocumentGenPanel/ExportFormatSelector.tsx`) — DOCX/PDF/Markdown toggle, single-select, default DOCX (Task 8.4)
+- [x] Citation type extended in `types/index.ts` — `source`, `url`, `title`, `citation` fields (backward-compatible)
+- [x] 44 new component tests (142 desktop total, 643 total across all suites)
 
 ### Phase 9: Hardening & Production Readiness — NOT STARTED
 

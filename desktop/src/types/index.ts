@@ -17,6 +17,11 @@ export interface Citation {
   chunk_id: string
   text_snippet: string
   page: number | null
+  // Phase 8: source-typed citation fields (all optional for backward compat)
+  source?: 'firm' | 'web' | 'westlaw' | 'lexisnexis'
+  url?: string
+  title?: string
+  citation?: string
 }
 
 export interface Message {
