@@ -140,12 +140,28 @@ ai-legal-cowork/
 │   │       └── test_chat_integration.py # Full chat flow integration
 │   ├── pyproject.toml
 │   └── Dockerfile
-├── desktop/                     # Tauri 2 + React desktop app
+├── desktop/                     # Tauri 2 + React desktop app (Phase 5)
 │   ├── src/
+│   │   ├── types/index.ts       # Shared TS interfaces: User, Matter, Citation, Message, Conversation
+│   │   ├── stores/
+│   │   │   ├── authStore.ts     # Zustand auth slice (token, user, login/logout)
+│   │   │   └── chatStore.ts     # Zustand chat state (active matter, conversations, messages)
+│   │   ├── services/
+│   │   │   ├── apiClient.ts     # fetch wrapper with JWT header injection + 401 auto-logout
+│   │   │   ├── tokenStorage.ts  # Tauri Store (production) / localStorage (tests) abstraction
+│   │   │   └── sseClient.ts     # POST SSE client via fetch + ReadableStream
+│   │   ├── components/
+│   │   │   ├── AuthGuard/       # Route guard: login page vs main view
+│   │   │   ├── LoginPage/       # Email + password form → JWT
+│   │   │   ├── MatterSelector/  # Dropdown: assigned matters → active matter
+│   │   │   ├── Chat/            # ChatInput, ChatMessage, ChatWindow
+│   │   │   ├── Citations/       # CitationLink: numbered inline [N] with hover tooltip
+│   │   │   ├── ConversationList/ # Sidebar: list, new chat, search
+│   │   │   └── DocumentViewer/  # Split-view read-only pane, chunk highlight + scroll
 │   │   ├── main.tsx             # React entry
-│   │   ├── App.tsx              # Root component (scaffold)
-│   │   └── App.test.tsx         # Component test
-│   ├── src-tauri/               # Rust backend
+│   │   ├── App.tsx              # AuthGuard → LoginPage / MainView
+│   │   └── App.test.tsx         # App render tests
+│   ├── src-tauri/               # Rust backend (Tauri 2)
 │   │   ├── src/
 │   │   └── Cargo.toml
 │   └── vite.config.ts
@@ -275,11 +291,23 @@ See [api/README.md — MCP Server Layer](api/README.md#mcp-server-layer-phase-2)
 | `phase4/test_langsmith.py` | TracingConfig: env vars, from_env(), configure_tracing() |
 | `phase4/test_chat_integration.py` | Full chat flow: JWT → orchestrator → retrieval → SSE cited response |
 
-### Desktop (`desktop/src/`) — 1 test file
+### Desktop (`desktop/src/`) — 13 test files (73 tests)
 
 | Test File | Coverage |
 |-----------|----------|
-| `App.test.tsx` | Root component render |
+| `stores/authStore.test.ts` | Zustand auth slice: login, logout, isAuthenticated |
+| `services/apiClient.test.ts` | JWT header injection, 401 → logout, JSON parsing |
+| `services/sseClient.test.ts` | POST SSE: token events, citations event, error handling |
+| `components/LoginPage/LoginPage.test.tsx` | Form submit, error display, redirect on success |
+| `components/AuthGuard/AuthGuard.test.tsx` | Unauthenticated → login; authenticated → main view |
+| `components/MatterSelector/MatterSelector.test.tsx` | Fetch matters, dropdown, set active matter |
+| `components/Chat/ChatInput.test.tsx` | Textarea, send button, Enter to send, clears on submit |
+| `components/Chat/ChatMessage.test.tsx` | User/assistant rendering, streaming cursor, citation refs |
+| `components/Chat/ChatWindow.test.tsx` | Integrated chat: input + messages + SSE |
+| `components/Citations/CitationLink.test.tsx` | Numbered links, hover tooltip, onClick |
+| `components/ConversationList/ConversationList.test.tsx` | List, new chat, search filter, switching |
+| `components/DocumentViewer/DocumentViewer.test.tsx` | Open/close, content, chunk highlight + scroll |
+| `App.test.tsx` | Auth-gated routing: login page vs main view |
 
 ---
 
@@ -355,9 +383,25 @@ All Phase 4 tasks (4.1–4.18) are implemented and tested. See [docs/phases/phas
 - [x] Access control wired into /chat — matter assignments → retriever filter
 - [x] 145 unit + integration tests (213 total agents tests, all passing)
 
-### Phase 5: Desktop App — NOT STARTED
+### Phase 5: Desktop App — COMPLETE
 
-Chat UI, SSE streaming, citation rendering, document viewer.
+All Phase 5 tasks (5.1–5.15) are implemented and tested. See [docs/phases/phase_5.md](docs/phases/phase_5.md) for full details.
+
+- [x] Zustand auth store (`stores/authStore.ts`) — token, user, login/logout actions
+- [x] REST API client (`services/apiClient.ts`) — fetch wrapper with JWT header injection + 401 auto-logout
+- [x] Login page (`components/LoginPage/`) — email + password form, JWT stored, redirect on success
+- [x] Auth guard (`components/AuthGuard/`) — login page vs main view based on auth state
+- [x] Matter selector (`components/MatterSelector/`) — fetches assigned matters, sets active in Zustand
+- [x] SSE client service (`services/sseClient.ts`) — POST SSE via fetch + ReadableStream; token + citations events
+- [x] Chat input component (`components/Chat/ChatInput.tsx`) — textarea, send button, Enter to send
+- [x] Chat message display (`components/Chat/ChatMessage.tsx`) — streaming cursor, citation references
+- [x] Inline citation rendering (`components/Citations/CitationLink.tsx`) — numbered `[N]` with hover tooltip
+- [x] Conversation list sidebar (`components/ConversationList/`) — list, switch, search
+- [x] New conversation action — "New Chat" creates and switches to new conversation
+- [x] Document viewer (`components/DocumentViewer/`) — split-view read-only, chunk highlight + scroll
+- [x] Document viewer navigation — scrolls to referenced chunk by substring match
+- [x] Conversation search — real-time title/content filter
+- [x] 73 component + store + service tests (13 files, all passing)
 
 ### Phase 6: End-to-End Integration — NOT STARTED
 
