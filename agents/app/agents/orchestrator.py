@@ -1,8 +1,9 @@
-"""LangGraph orchestrator agent — classify intent, route to retrieval agent (task 4.10).
+"""LangGraph orchestrator agent — classify intent, route to sub-agents
+(tasks 4.10, 7.4, 7.14).
 
 Graph topology::
 
-    START → classify_intent → [retrieval | direct_answer] → END
+    START → classify_intent → [retrieval | research | drafting | general] → END
 
 The orchestrator uses the LLM gateway to classify intent and then routes to
 the appropriate sub-agent or generates a direct response.
@@ -20,6 +21,8 @@ class IntentType(StrEnum):
     """Supported intent types for routing."""
 
     RETRIEVAL = "retrieval"
+    RESEARCH = "research"
+    DRAFTING = "drafting"
     GENERAL = "general"
 
 
@@ -38,12 +41,16 @@ Classify the following legal query into exactly one category:
 
 - retrieval: Questions that require searching legal documents, case facts, \
   contract terms, or any factual matter-specific information.
+- research: Questions asking for legal research, recent precedents, case law, \
+  legal analysis, or questions about what the law says on a topic.
+- drafting: Requests to draft, write, generate, or create a legal document \
+  (e.g. NDA, engagement letter, motion, contract).
 - general: Conversational messages, greetings, or very broad conceptual \
-  questions that don't require document retrieval.
+  questions that don't require document retrieval or research.
 
 Query: {query}
 
-Respond with just one word: either "retrieval" or "general".
+Respond with just one word: "retrieval", "research", "drafting", or "general".
 """
 
 
@@ -56,11 +63,25 @@ class OrchestratorAgent:
         :class:`~app.agents.retrieval_agent.RetrievalAgent` instance.
     gateway:
         LLM gateway for intent classification and direct answers.
+    research_agent:
+        Optional :class:`~app.agents.research_agent.ResearchAgent` instance.
+        Required for routing research-intent queries.
+    drafting_agent:
+        Optional :class:`~app.agents.drafting_agent.DraftingAgent` instance.
+        Required for routing drafting-intent queries.
     """
 
-    def __init__(self, retrieval_agent: Any, gateway: Any) -> None:
+    def __init__(
+        self,
+        retrieval_agent: Any,
+        gateway: Any,
+        research_agent: Any = None,
+        drafting_agent: Any = None,
+    ) -> None:
         self._retrieval_agent = retrieval_agent
         self._gateway = gateway
+        self._research_agent = research_agent
+        self._drafting_agent = drafting_agent
         self.graph = self._build_graph()
 
     # ------------------------------------------------------------------
@@ -104,6 +125,8 @@ class OrchestratorAgent:
 
         graph.add_node("classify_intent", self._node_classify_intent)
         graph.add_node("handle_retrieval", self._node_handle_retrieval)
+        graph.add_node("handle_research", self._node_handle_research)
+        graph.add_node("handle_drafting", self._node_handle_drafting)
         graph.add_node("handle_general", self._node_handle_general)
 
         graph.set_entry_point("classify_intent")
@@ -112,10 +135,14 @@ class OrchestratorAgent:
             self._route,
             {
                 IntentType.RETRIEVAL: "handle_retrieval",
+                IntentType.RESEARCH: "handle_research",
+                IntentType.DRAFTING: "handle_drafting",
                 IntentType.GENERAL: "handle_general",
             },
         )
         graph.add_edge("handle_retrieval", END)
+        graph.add_edge("handle_research", END)
+        graph.add_edge("handle_drafting", END)
         graph.add_edge("handle_general", END)
 
         return graph.compile()
@@ -128,6 +155,10 @@ class OrchestratorAgent:
         intent_str = (state.get("intent") or "").strip().lower()
         if intent_str == IntentType.RETRIEVAL:
             return IntentType.RETRIEVAL
+        if intent_str == IntentType.RESEARCH:
+            return IntentType.RESEARCH
+        if intent_str == IntentType.DRAFTING:
+            return IntentType.DRAFTING
         return IntentType.GENERAL
 
     # ------------------------------------------------------------------
@@ -139,7 +170,11 @@ class OrchestratorAgent:
         raw = await self._gateway.complete(prompt)
         intent_str = raw.strip().lower()
 
-        if "retrieval" in intent_str:
+        if "research" in intent_str:
+            intent = IntentType.RESEARCH
+        elif "drafting" in intent_str or "draft" in intent_str:
+            intent = IntentType.DRAFTING
+        elif "retrieval" in intent_str:
             intent = IntentType.RETRIEVAL
         else:
             intent = IntentType.GENERAL
@@ -148,6 +183,28 @@ class OrchestratorAgent:
 
     async def _node_handle_retrieval(self, state: OrchestratorState) -> dict:
         result = await self._retrieval_agent.run(
+            query=state["query"],
+            matter_id=state["matter_id"],
+            access_level=state["access_level"],
+        )
+        return {"result": result}
+
+    async def _node_handle_research(self, state: OrchestratorState) -> dict:
+        if self._research_agent is None:
+            # Fallback to retrieval if research agent not configured
+            return await self._node_handle_retrieval(state)
+        result = await self._research_agent.run(
+            query=state["query"],
+            matter_id=state["matter_id"],
+            access_level=state["access_level"],
+        )
+        return {"result": result}
+
+    async def _node_handle_drafting(self, state: OrchestratorState) -> dict:
+        if self._drafting_agent is None:
+            # Fallback to general if drafting agent not configured
+            return await self._node_handle_general(state)
+        result = await self._drafting_agent.run(
             query=state["query"],
             matter_id=state["matter_id"],
             access_level=state["access_level"],

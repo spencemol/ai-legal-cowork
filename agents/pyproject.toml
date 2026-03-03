@@ -21,6 +21,10 @@ dependencies = [
     "sse-starlette>=2.0.0",
     # Phase 4: JWT
     "python-jose[cryptography]>=3.3.0",
+    # Phase 7: Research & Drafting
+    "duckduckgo-search>=6.0.0",
+    "jinja2>=3.1.0",
+    "python-docx>=1.1.0",
 ]
 
 # Production ML/RAG dependencies (heavy — install separately in production):
@@ -43,8 +47,12 @@ agents = [
     # bge-reranker (requires PyTorch)
     "FlagEmbedding>=1.2.0",
 ]
+docgen = [
+    # PDF export (has complex system dependencies — install separately in production)
+    "weasyprint>=62.0",
+]
 all = [
-    "legal-ai-tool-agents[ml,rag,agents]",
+    "legal-ai-tool-agents[ml,rag,agents,docgen]",
 ]
 
 [dependency-groups]

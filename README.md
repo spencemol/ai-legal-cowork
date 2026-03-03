@@ -421,9 +421,24 @@ All Phase 6 tasks (6.1–6.9) are implemented and tested. See [docs/phases/phase
 - [x] Audit log E2E: PII_ACCESS, VIEW_DOCUMENT, CHAT_QUERY events with full schema (Task 6.9)
 - [x] 90 new E2E tests (51 agents + 14 API + 25 desktop; 489 total across all suites)
 
-### Phase 7: Research & Drafting Agents — NOT STARTED
+### Phase 7: Research & Drafting Agents — COMPLETE
 
-Research agent (multi-source), drafting agent (template + freeform), document export.
+All Phase 7 tasks (7.1–7.15) are implemented and tested. See [docs/phases/phase_7.md](docs/phases/phase_7.md) for full details.
+
+- [x] DuckDuckGo search tool (`app/research/web_search.py`) — `{title, url, snippet}` results
+- [x] Legal DB search stub (`app/research/legal_db.py`) — Westlaw/LexisNexis-shaped mock; interface ready for real integration
+- [x] LangGraph research agent (`app/agents/research_agent.py`) — firm data + web + legal DB → synthesized answer with mixed citations
+- [x] Orchestrator routes research intent — `RESEARCH` IntentType; "precedents", "case law", "research" keywords
+- [x] Jinja2 template loader (`app/docgen/template_loader.py`) — loads `.j2` templates, raises `TemplateNotFound` for missing
+- [x] 3 sample templates — engagement letter, NDA, motion with proper placeholder variables
+- [x] Template-based renderer (`app/docgen/renderer.py`) — renders context dict into full document string
+- [x] Freeform drafting module (`app/docgen/freeform.py`) — async LLM-driven drafting with retrieved context
+- [x] DOCX export (`app/docgen/exporter.py`) — python-docx paragraph rendering
+- [x] PDF export — weasyprint with graceful plain-text fallback (production: `uv sync --extra docgen`)
+- [x] Markdown export — UTF-8 `.md` file write
+- [x] LangGraph drafting agent (`app/agents/drafting_agent.py`) — classify → template/freeform → export
+- [x] Orchestrator routes drafting intent — `DRAFTING` IntentType; "draft", "write an NDA", "generate document"
+- [x] 110 unit + integration tests (374 total agents tests, 599 total across all suites)
 
 ### Phase 8: Desktop Research & Drafting UI — NOT STARTED
 
