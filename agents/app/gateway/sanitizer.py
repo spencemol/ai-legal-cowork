@@ -39,11 +39,40 @@ _INJECTION_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ),
     (
         "forget_instructions",
-        re.compile(r"\b(forget|disregard|override)\s+(all\s+)?(previous|prior|your)\s+(instructions?|rules?|training|guidelines?)", re.IGNORECASE),
+        re.compile(r"\b(forget|disregard|override)\s+(?:(?:all|your|previous|prior)\s+){0,3}(instructions?|rules?|training|guidelines?)", re.IGNORECASE),
     ),
     (
         "reveal_system_prompt",
-        re.compile(r"(reveal|show|print|output|repeat)\s+(your\s+)?(system\s+prompt|instructions?|training\s+data)", re.IGNORECASE),
+        re.compile(r"(reveal|show|print|output|repeat)\s+(?:me\s+)?(?:your\s+)?(system\s+prompt|instructions?|training\s+data)", re.IGNORECASE),
+    ),
+    # ── Additional patterns added in Task 9.7 ────────────────────────────────
+    (
+        "dan_jailbreak",
+        re.compile(r"\bDAN\b|do\s+anything\s+now", re.IGNORECASE),
+    ),
+    (
+        "system_tag_override",
+        re.compile(r"\[INST\]|\[SYSTEM\]|<\|system\|>|<\|im_start\|>\s*system", re.IGNORECASE),
+    ),
+    (
+        "html_comment_injection",
+        re.compile(r"<!--\s*(?:ignore|override|disregard|forget)\s+(?:above|previous|all)", re.IGNORECASE),
+    ),
+    (
+        "new_instructions_override",
+        re.compile(r"\byour\s+new\s+instructions?\s+(are|is)\b", re.IGNORECASE),
+    ),
+    (
+        "repeat_after_me",
+        re.compile(r"\brepeat\s+after\s+me\b.{0,60}(?:i\s+am\s+now|you\s+are\s+now|new\s+mode)", re.IGNORECASE),
+    ),
+    (
+        "code_fence_injection",
+        re.compile(r"```\s*\n.*(?:actual\s+instructions?|new\s+prompt|override)", re.IGNORECASE | re.DOTALL),
+    ),
+    (
+        "you_are_now",
+        re.compile(r"\byou\s+are\s+now\b.{0,80}\b(unrestricted|free|unfiltered|DAN|jailbreak|without\s+limits?)", re.IGNORECASE),
     ),
 ]
 
