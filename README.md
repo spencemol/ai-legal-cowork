@@ -81,6 +81,25 @@ ai-legal-cowork/
 ├── agents/                      # Python agent backend (FastAPI) — [README](agents/README.md)
 │   ├── app/
 │   │   ├── main.py              # FastAPI app + route registration
+│   │   ├── gateway/             # LLM Gateway (Phase 4)
+│   │   │   ├── client.py        # LLMGateway — Claude API wrapper (configurable model/temp/max_tokens)
+│   │   │   └── sanitizer.py     # InputSanitizer — prompt injection detection
+│   │   ├── pii/                 # PII management (Phase 4)
+│   │   │   ├── redactor.py      # PIIRedactor (Presidio) + PIIRehydrator (access-level-aware)
+│   │   │   └── audit.py         # PIIAuditLogger
+│   │   ├── retrieval/           # RAG retrieval (Phase 4)
+│   │   │   ├── retriever.py     # PineconeRetriever — metadata-filtered vector search
+│   │   │   ├── reranker.py      # BGEReranker — FlagReranker-backed re-ranking
+│   │   │   └── citations.py     # CitationFormatter — chunk → citation JSONB
+│   │   ├── mcp_client/          # MCP client (Phase 4)
+│   │   │   └── client.py        # MCPClient — HTTP calls to Node API MCP tools
+│   │   ├── agents/              # LangGraph agents (Phase 4)
+│   │   │   ├── retrieval_agent.py # Retrieval agent: search → rerank → cite
+│   │   │   ├── orchestrator.py  # Orchestrator: intent classification → routing
+│   │   │   ├── checkpointer.py  # MongoCheckpointerFactory (langgraph-checkpoint-mongodb)
+│   │   │   └── tracing.py       # TracingConfig — LangSmith env-var setup
+│   │   ├── auth/                # Auth (Phase 4)
+│   │   │   └── jwt_validator.py # JWTValidator + require_auth dependency (python-jose HS256)
 │   │   ├── rag/                 # Ingestion pipeline (Phase 3)
 │   │   │   ├── models.py        # Pydantic models (PageContent, TextChunk, VectorRecord…)
 │   │   │   ├── hasher.py        # SHA-256 file hasher
@@ -91,19 +110,34 @@ ai-legal-cowork/
 │   │   │   ├── api_client.py    # Node REST API HTTP client
 │   │   │   └── ingestion.py     # End-to-end pipeline orchestration
 │   │   └── routes/
-│   │       └── ingest.py        # POST /ingest endpoint
+│   │       ├── ingest.py        # POST /ingest endpoint
+│   │       └── chat.py          # POST /chat SSE streaming endpoint (Phase 4)
 │   ├── tests/
 │   │   ├── test_health.py
-│   │   └── ingestion/           # Phase 3 test suite (66 tests)
+│   │   ├── ingestion/           # Phase 3 test suite (68 tests)
+│   │   │   ├── conftest.py
+│   │   │   ├── test_hasher.py
+│   │   │   ├── test_chunker.py
+│   │   │   ├── test_embedder.py
+│   │   │   ├── test_parser.py
+│   │   │   ├── test_pinecone_store.py
+│   │   │   ├── test_api_client.py
+│   │   │   ├── test_ingestion_integration.py
+│   │   │   └── test_ingest_endpoint.py
+│   │   └── phase4/              # Phase 4 test suite (145 tests)
 │   │       ├── conftest.py
-│   │       ├── test_hasher.py
-│   │       ├── test_chunker.py
-│   │       ├── test_embedder.py
-│   │       ├── test_parser.py
-│   │       ├── test_pinecone_store.py
-│   │       ├── test_api_client.py
-│   │       ├── test_ingestion_integration.py
-│   │       └── test_ingest_endpoint.py
+│   │       ├── test_gateway.py          # LLM Gateway + input sanitizer
+│   │       ├── test_pii.py              # PII redactor + rehydrator
+│   │       ├── test_retriever.py        # Pinecone retriever
+│   │       ├── test_reranker.py         # BGE reranker
+│   │       ├── test_citations.py        # Citation formatter
+│   │       ├── test_mcp_client.py       # MCP HTTP client
+│   │       ├── test_retrieval_agent.py  # LangGraph retrieval agent
+│   │       ├── test_orchestrator.py     # LangGraph orchestrator
+│   │       ├── test_chat_endpoint.py    # SSE /chat endpoint + JWT + access control
+│   │       ├── test_checkpointer.py     # MongoDB checkpointer
+│   │       ├── test_langsmith.py        # LangSmith tracing config
+│   │       └── test_chat_integration.py # Full chat flow integration
 │   ├── pyproject.toml
 │   └── Dockerfile
 ├── desktop/                     # Tauri 2 + React desktop app
@@ -148,6 +182,8 @@ ai-legal-cowork/
 
 ## API Endpoints
 
+### Node REST API (`http://localhost:3000`)
+
 | Method | Path | Purpose |
 |--------|------|---------|
 | `POST` | `/auth/register` | Register user |
@@ -161,6 +197,14 @@ ai-legal-cowork/
 | `PATCH` | `/documents/:id/status` | Ingestion status updates |
 | `POST/GET` | `/matters/:id/conversations` | Conversation management |
 | `POST` | `/conversations/:id/messages` | Add messages |
+| `GET` | `/health` | Health check |
+
+### Python Agent Backend (`http://localhost:8000`)
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `POST` | `/chat` | Streaming SSE chat — JWT required, sends `matter_id` + `query`; streams tokens + `citations` event |
+| `POST` | `/ingest` | Trigger document ingestion — accepts `file_paths` + `matter_id` |
 | `GET` | `/health` | Health check |
 
 ---
@@ -198,7 +242,9 @@ See [api/README.md — MCP Server Layer](api/README.md#mcp-server-layer-phase-2)
 | `health.test.ts` | Server bootstrap |
 | `mcp-tools.test.ts` | All 10 MCP tools via InMemoryTransport (Tasks 2.1–2.7) |
 
-### Agents (`agents/tests/`) — 8 test files (68 tests)
+### Agents (`agents/tests/`) — 20 test files (213 tests)
+
+**Phase 3 — Ingestion (8 files, 68 tests)**
 
 | Test File | Coverage |
 |-----------|----------|
@@ -211,6 +257,23 @@ See [api/README.md — MCP Server Layer](api/README.md#mcp-server-layer-phase-2)
 | `ingestion/test_api_client.py` | REST API client: GET docs, register, status PATCH, camelCase payload |
 | `ingestion/test_ingestion_integration.py` | End-to-end pipeline: new file, dedup skip, failure → failed status, ingest_many counts |
 | `ingestion/test_ingest_endpoint.py` | POST /ingest: 200 schema, 422 validation, empty list |
+
+**Phase 4 — Agent Backend Core (12 files, 145 tests)**
+
+| Test File | Coverage |
+|-----------|----------|
+| `phase4/test_gateway.py` | LLM Gateway: prompt call, model params; Input sanitizer: injection patterns |
+| `phase4/test_pii.py` | PIIRedactor: placeholder format, mapping table; PIIRehydrator: full/restricted/read_only |
+| `phase4/test_retriever.py` | PineconeRetriever: matter_id + access_level metadata filter, top-K |
+| `phase4/test_reranker.py` | BGEReranker: score pairs, top-K, sorted descending |
+| `phase4/test_citations.py` | CitationFormatter: doc_id, chunk_id, text_snippet, page schema |
+| `phase4/test_mcp_client.py` | MCPClient: HTTP tool calls, get_matter, list_matters |
+| `phase4/test_retrieval_agent.py` | LangGraph retrieval agent: retrieve → rerank → generate → cite |
+| `phase4/test_orchestrator.py` | LangGraph orchestrator: intent classification, routing to retrieval |
+| `phase4/test_chat_endpoint.py` | POST /chat SSE: JWT auth, matter access, token streaming, citations |
+| `phase4/test_checkpointer.py` | MongoCheckpointerFactory: env config, langgraph-checkpoint-mongodb |
+| `phase4/test_langsmith.py` | TracingConfig: env vars, from_env(), configure_tracing() |
+| `phase4/test_chat_integration.py` | Full chat flow: JWT → orchestrator → retrieval → SSE cited response |
 
 ### Desktop (`desktop/src/`) — 1 test file
 
@@ -270,16 +333,27 @@ All Phase 3 tasks (3.1–3.11) are implemented and tested.  See [agents/README.m
 - [x] `POST /ingest` endpoint (`app/routes/ingest.py`) — Pydantic-validated request, aggregated `IngestionResult` response
 - [x] 66 tests across 6 unit test files + 1 integration test file (all mocked: no Pinecone key, no LlamaParse key, no PyTorch required)
 
-### Phase 4: Agent Backend Core — NOT STARTED
+### Phase 4: Agent Backend Core — COMPLETE
 
-Minimal AI chat path: orchestrator → retrieval agent → cited answer via SSE.
+All Phase 4 tasks (4.1–4.18) are implemented and tested. See [docs/phases/phase_4.md](docs/phases/phase_4.md) for full details.
 
-- [ ] LLM Gateway (Claude API wrapper + input sanitization)
-- [ ] PII redactor (Presidio) + re-hydrator
-- [ ] Pinecone retriever + bge-reranker
-- [ ] LangGraph agents (orchestrator + retrieval)
-- [ ] SSE streaming endpoint
-- [ ] MongoDB checkpointer + LangSmith integration
+- [x] LLM Gateway (`app/gateway/client.py`) — Claude API wrapper, configurable model/temperature/max_tokens
+- [x] Input sanitizer (`app/gateway/sanitizer.py`) — prompt injection detection (regex patterns)
+- [x] PII redactor (`app/pii/redactor.py`) — Presidio-backed, `[ENTITY_TYPE_N]` placeholders, mapping table
+- [x] PII re-hydrator (`app/pii/redactor.py`) — access-level-aware: full/restricted/read_only
+- [x] Pinecone retriever (`app/retrieval/retriever.py`) — matter_id + access_level metadata filtering
+- [x] BGE reranker (`app/retrieval/reranker.py`) — FlagReranker, top-K sorted by score
+- [x] Citation formatter (`app/retrieval/citations.py`) — JSONB `[{doc_id, chunk_id, text_snippet, page}]`
+- [x] MCP client (`app/mcp_client/client.py`) — HTTP transport calls to Node API MCP tools
+- [x] LangGraph retrieval agent (`app/agents/retrieval_agent.py`) — search → rerank → generate → cite
+- [x] LangGraph orchestrator (`app/agents/orchestrator.py`) — intent classification → routing
+- [x] SSE chat endpoint (`app/routes/chat.py`) — `POST /chat`, token streaming + citations
+- [x] PII integrated into chat flow — redact before LLM, re-hydrate by access level
+- [x] MongoDB checkpointer (`app/agents/checkpointer.py`) — langgraph-checkpoint-mongodb factory
+- [x] LangSmith tracing (`app/agents/tracing.py`) — TracingConfig with env-var setup
+- [x] JWT validation in FastAPI (`app/auth/jwt_validator.py`) — HS256, python-jose, require_auth dependency
+- [x] Access control wired into /chat — matter assignments → retriever filter
+- [x] 145 unit + integration tests (213 total agents tests, all passing)
 
 ### Phase 5: Desktop App — NOT STARTED
 
