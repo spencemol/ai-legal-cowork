@@ -330,17 +330,23 @@ Drafting Agent:   Template-based (Jinja2) or freeform (LLM) -> render docs
 - Docker Compose for local dev (Postgres, MongoDB)
 - CI pipeline skeleton (lint, type-check, test for all 3 runtimes)
 
-### Phase 1: Node REST API + Auth
+### Phase 1: Auth, RBAC & Structured Data CRUD (Node REST API)
 - Postgres schema (Prisma migrations)
 - User registration + login (username/password)
 - JWT issuance + validation middleware
 - RBAC middleware (role-based route guards)
 - CRUD endpoints: users, matters, clients, matter_assignments, documents, conversations, messages
 - Audit log service
-- MCP server layer on top of REST endpoints
-- **Tests**: Unit tests for auth, RBAC, CRUD
+- Zod request validation schemas for all routes
+- Global error handler middleware (Fastify `onError` hook)
+- **Tests**: Unit tests for auth, RBAC, CRUD, matter-scoped access control
 
-### Phase 2: Ingestion Pipeline
+### Phase 2: MCP Server Layer (Node REST API)
+- Install `@modelcontextprotocol/sdk`; scaffold MCP server in `api/src/mcp/`
+- Register MCP tools for matters, clients, documents, conversations, and audit logging
+- **Tests**: Integration tests for MCP tools (mock Prisma, verify tool responses)
+
+### Phase 3: Ingestion Pipeline
 - LlamaParse integration for PDF parsing
 - Chunking strategy (semantic chunking, configurable chunk size/overlap)
 - SHA-256 dedup (hash check before re-embedding)
@@ -349,65 +355,89 @@ Drafting Agent:   Template-based (Jinja2) or freeform (LLM) -> render docs
 - Document status tracking (pending -> processing -> indexed)
 - Manual refresh endpoint (user specifies files)
 - Startup ingestion trigger
-- Airflow DAG for re-indexing (basic)
 - **Tests**: Unit tests for chunking, dedup, embedding; integration test for end-to-end ingestion
 
-### Phase 3: Agent Backend Core
-- FastAPI app skeleton with SSE streaming endpoint
+### Phase 4: Agent Backend Core (Minimal Chat Path)
+- FastAPI app skeleton with SSE streaming endpoint (`POST /chat`)
 - LLM Gateway module (Claude API wrapper, input sanitization, prompt injection detection)
-- Presidio PII redactor (custom recognizers for legal entities)
+- Presidio PII redactor + re-hydrator (access-level-aware; custom recognizers for legal entities)
 - Pinecone retriever with metadata filtering (matter_id, access_level)
-- bge-reranker integration
+- bge-reranker integration + citation formatter
 - MCP client for calling Node REST API
-- LangGraph orchestrator agent (intent classification, routing)
-- Retrieval agent (search -> rerank -> cite)
+- LangGraph orchestrator agent (intent classification, routing) + retrieval agent (search -> rerank -> cite)
 - LangGraph MongoDB checkpointer setup
 - LangSmith integration (tracing)
+- JWT validation in FastAPI; matter-scoped access wired into `/chat`
 - **Tests**: Unit tests for gateway, PII redactor, retriever; integration tests for agent workflows
 
-### Phase 4: Desktop App
+### Phase 5: Desktop App (Minimal Usable Client)
 - Tauri 2 shell with React frontend
-- Auth flow (login screen -> JWT storage in Tauri secure store)
+- Auth flow (login screen -> JWT storage in Tauri secure store) + auth guard
+- Zustand store (auth slice); REST API client with JWT header injection
 - Chat interface (message input, streaming response display, conversation list)
 - SSE client service (with abstraction layer for future WebSocket upgrade)
-- Inline citation rendering (clickable links)
+- Inline citation rendering (clickable links with snippet preview)
 - Split-view document viewer (read-only, navigates to chunk/section)
-- Search UI (unified search bar, results display)
 - Matter selector / context switcher
-- **Tests**: Component tests (React Testing Library), Tauri integration tests
+- **Tests**: Component tests (React Testing Library)
 
-### Phase 5: Research & Drafting Agents
-- Research agent (multi-step: firm data + DuckDuckGo + legal DB stubs)
-- Drafting agent -- template-based (Jinja2 + python-docx)
-- Drafting agent -- freeform (LLM-driven with retrieved context)
+### Phase 6: End-to-End Integration (Minimal Vertical Slice)
+- Add agents backend to `docker-compose.yml`; configure shared JWT secret
+- Seed script: test user, matter, assignment, sample PDF → Postgres + Pinecone
+- E2E smoke test: login → select matter → ask question → streamed cited response
+- E2E test: citation click → document viewer opens at correct section
+- E2E test: cross-matter access control (user without assignment → 403 / empty results)
+- E2E test: PII redacted in LLM trace, re-hydrated per access level in response
+- E2E test: conversation persisted and resumable across sessions
+- E2E test: audit log records PII access events
+
+### Phase 7: Research & Drafting Agents
+- Research agent (multi-step: firm data + DuckDuckGo + legal DB stubs); wire into orchestrator
+- Drafting agent — template-based (Jinja2 + python-docx); wire into orchestrator
+- Drafting agent — freeform (LLM-driven with retrieved context)
 - Export pipeline (DOCX, PDF via pandoc/weasyprint, Markdown)
-- **Tests**: Agent workflow tests, document generation tests
+- **Tests**: Agent workflow tests (research + drafting paths), document generation tests
 
-### Phase 6: Integration & Hardening
-- End-to-end access control verification (structured + unstructured)
-- PII redaction end-to-end (before LLM + display-level based on access)
-- Audit logging end-to-end
-- SSO/SAML/OIDC pluggable auth (configure per deployment)
-- Conversation persistence + search
-- Performance testing (concurrent users, large corpus)
-- Security review (prompt injection, XSS, auth bypass)
-- **Tests**: E2E integration tests, security tests, load tests
+### Phase 8: Desktop App — Research & Drafting UI
+- Research results display with mixed citation source-type badges (internal, web, legal DB)
+- Document generation request UI (template selector or freeform, format selector DOCX/PDF/MD)
+- Document download handler (save generated file to local disk via Tauri)
+- **Tests**: Component tests for research display and document generation UI
+
+### Phase 9: Hardening, Observability & Production Readiness
+- Pluggable SSO/SAML/OIDC auth (configurable per deployment); SSO login flow in desktop
+- Encryption at rest for Postgres; enforce HTTPS/TLS for all inter-service communication
+- Airflow DAG for scheduled re-indexing
+- Custom Presidio recognizers for legal entities (case numbers, bar IDs, court names)
+- Prompt injection detection test suite (known attack patterns blocked)
+- Performance tests: 200 concurrent users on `/chat`; retrieval across 100K+ vectors
+- Security tests: cross-matter data leakage, privilege escalation, audit log completeness
+- **Tests**: Load tests, security tests, E2E audit log completeness
 
 ---
 
 ## Dependencies & Execution Order
 
 ```
-Phase 0 --> Phase 1 -+-> Phase 3 --> Phase 4 --> Phase 6
-                      |                |
-            Phase 2 -+    Phase 5 ----+
+Phase 0 ──→ Phase 1 ──→ Phase 2 (MCP) ──→ Phase 4 (agents)
+                │                               │
+                └──→ Phase 3 (ingest) ──────────┘
+                                                │
+                                           Phase 5 (desktop) ──→ Phase 6 (E2E)
+                                                │
+                                           Phase 7 (research/draft) ──→ Phase 8 (desktop R&D UI)
+                                                                               │
+                                                                          Phase 9 (hardening)
 ```
 
-- Phase 1 and Phase 2 can run **in parallel** after Phase 0
-- Phase 3 depends on Phase 1 (MCP client needs REST API) and Phase 2 (retrieval needs indexed docs)
-- Phase 4 depends on Phase 1 (auth) and Phase 3 (agent streaming)
-- Phase 5 depends on Phase 3 (agent framework must exist)
-- Phase 6 depends on all prior phases
+- Phase 1 and Phase 3 can run **in parallel** after Phase 0
+- Phase 2 (MCP) depends on Phase 1 (CRUD endpoints must exist before wrapping as MCP tools)
+- Phase 4 depends on Phase 2 (MCP client needs tools registered) and Phase 3 (retrieval needs indexed docs)
+- Phase 5 depends on Phase 1 (auth) and Phase 4 (agent streaming)
+- Phase 6 depends on Phases 1–5
+- Phase 7 depends on Phase 4 (agent framework must exist)
+- Phase 8 depends on Phase 5 (desktop shell) and Phase 7 (research/drafting agents)
+- Phase 9 depends on all prior phases
 
 ---
 
