@@ -15,7 +15,9 @@ const OTHER_MATTER_ID = '22222222-2222-2222-2222-222222222222'
 const { mockPrisma } = vi.hoisted(() => {
   const baseMatter = {
     id: '11111111-1111-1111-1111-111111111111',
-    name: 'Smith v. Jones',
+    title: 'Smith v. Jones',
+    case_number: 'CASE-2024-001',
+    description: 'Contract dispute between Smith and Jones',
     status: 'active',
     created_by_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
     created_at: new Date('2024-01-01T00:00:00Z'),
@@ -34,7 +36,7 @@ const { mockPrisma } = vi.hoisted(() => {
         create: vi.fn().mockResolvedValue(baseMatter),
         findUnique: vi.fn().mockResolvedValue(baseMatter),
         findMany: vi.fn().mockResolvedValue([baseMatter]),
-        update: vi.fn().mockResolvedValue({ ...baseMatter, name: 'Updated Matter' }),
+        update: vi.fn().mockResolvedValue({ ...baseMatter, title: 'Updated Matter' }),
       },
       matterAssignment: {
         findFirst: vi.fn().mockResolvedValue(baseAssignment),
@@ -85,22 +87,35 @@ describe('POST /matters', () => {
       method: 'POST',
       url: '/matters',
       headers: { authorization: bearerHeader(TEST_USERS.attorney) },
-      payload: { name: 'Smith v. Jones', status: 'active' },
+      payload: { title: 'Smith v. Jones', case_number: 'CASE-2024-001', status: 'active' },
     })
     expect(response.statusCode).toBe(201)
-    const body = response.json<{ id: string; name: string; status: string }>()
+    const body = response.json<{ id: string; title: string; case_number: string; status: string }>()
     expect(body.id).toBeDefined()
-    expect(body.name).toBe('Smith v. Jones')
+    expect(body.title).toBe('Smith v. Jones')
+    expect(body.case_number).toBe('CASE-2024-001')
     await app.close()
   })
 
-  it('returns 400 when name is missing', async () => {
+  it('returns 400 when title is missing', async () => {
     const app = await buildServer()
     const response = await app.inject({
       method: 'POST',
       url: '/matters',
       headers: { authorization: bearerHeader(TEST_USERS.attorney) },
-      payload: { status: 'active' },
+      payload: { case_number: 'CASE-2024-002', status: 'active' },
+    })
+    expect(response.statusCode).toBe(400)
+    await app.close()
+  })
+
+  it('returns 400 when case_number is missing', async () => {
+    const app = await buildServer()
+    const response = await app.inject({
+      method: 'POST',
+      url: '/matters',
+      headers: { authorization: bearerHeader(TEST_USERS.attorney) },
+      payload: { title: 'Smith v. Jones', status: 'active' },
     })
     expect(response.statusCode).toBe(400)
     await app.close()
@@ -145,8 +160,10 @@ describe('GET /matters/:id', () => {
       headers: { authorization: bearerHeader(TEST_USERS.attorney) },
     })
     expect(response.statusCode).toBe(200)
-    const body = response.json<{ id: string; name: string }>()
+    const body = response.json<{ id: string; title: string; case_number: string }>()
     expect(body.id).toBe(MATTER_ID)
+    expect(body.title).toBeDefined()
+    expect(body.case_number).toBeDefined()
     await app.close()
   })
 
@@ -170,11 +187,11 @@ describe('PUT /matters/:id', () => {
       method: 'PUT',
       url: `/matters/${MATTER_ID}`,
       headers: { authorization: bearerHeader(TEST_USERS.attorney) },
-      payload: { name: 'Updated Matter' },
+      payload: { title: 'Updated Matter' },
     })
     expect(response.statusCode).toBe(200)
-    const body = response.json<{ name: string }>()
-    expect(body.name).toBe('Updated Matter')
+    const body = response.json<{ title: string }>()
+    expect(body.title).toBe('Updated Matter')
     await app.close()
   })
 })

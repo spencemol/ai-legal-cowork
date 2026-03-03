@@ -14,7 +14,9 @@ const { mockPrisma } = vi.hoisted(() => {
   const baseClient = {
     id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
     name: 'Alice Smith',
-    email: 'alice@example.com',
+    contact_email: 'alice@example.com',
+    contact_phone: '555-0100',
+    address: '123 Main St, Springfield, IL',
     role: 'plaintiff',
     created_at: new Date('2024-01-01T00:00:00Z'),
     updated_at: new Date('2024-01-01T00:00:00Z'),
@@ -84,12 +86,26 @@ describe('POST /clients', () => {
       method: 'POST',
       url: '/clients',
       headers: { authorization: bearerHeader(TEST_USERS.attorney) },
-      payload: { name: 'Alice Smith', email: 'alice@example.com', role: 'plaintiff' },
+      payload: {
+        name: 'Alice Smith',
+        contact_email: 'alice@example.com',
+        contact_phone: '555-0100',
+        address: '123 Main St, Springfield, IL',
+        role: 'plaintiff',
+      },
     })
     expect(response.statusCode).toBe(201)
-    const body = response.json<{ id: string; name: string; email: string }>()
+    const body = response.json<{
+      id: string
+      name: string
+      contact_email: string
+      contact_phone: string
+      address: string
+    }>()
     expect(body.name).toBe('Alice Smith')
-    expect(body.email).toBe('alice@example.com')
+    expect(body.contact_email).toBe('alice@example.com')
+    expect(body.contact_phone).toBe('555-0100')
+    expect(body.address).toBe('123 Main St, Springfield, IL')
     await app.close()
   })
 
@@ -107,7 +123,7 @@ describe('POST /clients', () => {
 })
 
 describe('GET /clients/:id', () => {
-  it('returns 200 with client data', async () => {
+  it('returns 200 with client data including contact fields', async () => {
     const app = await buildServer()
     const response = await app.inject({
       method: 'GET',
@@ -115,8 +131,17 @@ describe('GET /clients/:id', () => {
       headers: { authorization: bearerHeader(TEST_USERS.attorney) },
     })
     expect(response.statusCode).toBe(200)
-    const body = response.json<{ id: string; name: string }>()
+    const body = response.json<{
+      id: string
+      name: string
+      contact_email: string
+      contact_phone: string
+      address: string
+    }>()
     expect(body.id).toBe(CLIENT_ID)
+    expect(body.contact_email).toBe('alice@example.com')
+    expect(body.contact_phone).toBe('555-0100')
+    expect(body.address).toBe('123 Main St, Springfield, IL')
     await app.close()
   })
 

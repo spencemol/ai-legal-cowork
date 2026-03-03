@@ -70,7 +70,9 @@ model User {
 /// Task 1.7 — matters
 model Matter {
   id            String       @id @default(uuid())
-  name          String
+  title         String
+  case_number   String       @unique
+  description   String?
   status        MatterStatus @default(active)
   created_by_id String
   created_at    DateTime     @default(now())
@@ -85,12 +87,14 @@ model Matter {
 
 /// Task 1.7 — clients
 model Client {
-  id         String     @id @default(uuid())
-  name       String
-  email      String?
-  role       ClientRole @default(other)
-  created_at DateTime   @default(now())
-  updated_at DateTime   @updatedAt
+  id            String     @id @default(uuid())
+  name          String
+  contact_email String?
+  contact_phone String?
+  address       String?
+  role          ClientRole @default(other)
+  created_at    DateTime   @default(now())
+  updated_at    DateTime   @updatedAt
 
   matter_clients MatterClient[]
 }
@@ -174,6 +178,7 @@ model AuditLog {
   resource_type String
   resource_id   String
   metadata      Json?
+  ip_address    String?
   created_at    DateTime @default(now())
 
   user User @relation(fields: [user_id], references: [id])

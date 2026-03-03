@@ -19,6 +19,7 @@ const { mockPrisma } = vi.hoisted(() => {
           resource_type: 'document',
           resource_id: 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
           metadata: { fileName: 'contract.pdf' },
+          ip_address: '192.168.1.1',
           created_at: new Date('2024-01-01T00:00:00Z'),
         }),
         findMany: vi.fn().mockResolvedValue([]),
@@ -101,5 +102,33 @@ describe('logEvent (src/services/audit.ts)', () => {
       action: 'VIEW_DOCUMENT',
       resource_type: 'document',
     })
+  })
+
+  it('stores ip_address when provided', async () => {
+    await logEvent({
+      userId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      action: 'PII_ACCESS',
+      resourceType: 'document',
+      resourceId: 'doc-456',
+      ipAddress: '10.0.0.5',
+    })
+
+    expect(mockPrisma.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ ip_address: '10.0.0.5' }),
+      }),
+    )
+  })
+
+  it('omits ip_address when not provided', async () => {
+    await logEvent({
+      userId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      action: 'LOGIN',
+      resourceType: 'user',
+      resourceId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    })
+
+    const callArg = mockPrisma.auditLog.create.mock.calls[0][0] as { data: Record<string, unknown> }
+    expect(callArg.data.ip_address).toBeUndefined()
   })
 })

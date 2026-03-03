@@ -104,13 +104,25 @@ describe('Zod validation — POST /auth/login', () => {
 })
 
 describe('Zod validation — POST /matters', () => {
-  it('returns 400 when name is missing', async () => {
+  it('returns 400 when title is missing', async () => {
     const app = await buildServer()
     const response = await app.inject({
       method: 'POST',
       url: '/matters',
       headers: { authorization: bearerHeader(TEST_USERS.attorney) },
-      payload: { status: 'active' },
+      payload: { case_number: 'CASE-2024-001', status: 'active' },
+    })
+    expect(response.statusCode).toBe(400)
+    await app.close()
+  })
+
+  it('returns 400 when case_number is missing', async () => {
+    const app = await buildServer()
+    const response = await app.inject({
+      method: 'POST',
+      url: '/matters',
+      headers: { authorization: bearerHeader(TEST_USERS.attorney) },
+      payload: { title: 'Test Matter', status: 'active' },
     })
     expect(response.statusCode).toBe(400)
     await app.close()
@@ -122,7 +134,7 @@ describe('Zod validation — POST /matters', () => {
       method: 'POST',
       url: '/matters',
       headers: { authorization: bearerHeader(TEST_USERS.attorney) },
-      payload: { name: 'Test Matter', status: 'invalid_status' },
+      payload: { title: 'Test Matter', case_number: 'CASE-2024-001', status: 'invalid_status' },
     })
     expect(response.statusCode).toBe(400)
     await app.close()

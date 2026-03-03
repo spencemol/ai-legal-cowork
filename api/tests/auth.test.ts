@@ -273,7 +273,7 @@ describe('RBAC middleware (via POST /matters)', () => {
       method: 'POST',
       url: '/matters',
       headers: { authorization: bearerHeader(TEST_USERS.paralegal) },
-      payload: { name: 'Test Matter', status: 'active' },
+      payload: { title: 'Test Matter', case_number: 'CASE-RBAC-001', status: 'active' },
     })
     expect(response.statusCode).toBe(403)
     await app.close()
@@ -285,7 +285,7 @@ describe('RBAC middleware (via POST /matters)', () => {
       method: 'POST',
       url: '/matters',
       headers: { authorization: bearerHeader(TEST_USERS.attorney) },
-      payload: { name: 'Test Matter', status: 'active' },
+      payload: { title: 'Test Matter', case_number: 'CASE-RBAC-002', status: 'active' },
     })
     // 201 Created (not 403 Forbidden)
     expect(response.statusCode).toBe(201)
@@ -298,7 +298,7 @@ describe('RBAC middleware (via POST /matters)', () => {
       method: 'POST',
       url: '/matters',
       headers: { authorization: bearerHeader(TEST_USERS.partner) },
-      payload: { name: 'Partner Matter', status: 'active' },
+      payload: { title: 'Partner Matter', case_number: 'CASE-RBAC-003', status: 'active' },
     })
     expect(response.statusCode).toBe(201)
     await app.close()

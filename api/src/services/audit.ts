@@ -7,6 +7,7 @@ interface LogEventParams {
   resourceType: string
   resourceId: string
   metadata?: Prisma.InputJsonValue
+  ipAddress?: string
 }
 
 export async function logEvent(params: LogEventParams): Promise<AuditLog> {
@@ -17,6 +18,7 @@ export async function logEvent(params: LogEventParams): Promise<AuditLog> {
       resource_type: params.resourceType,
       resource_id: params.resourceId,
       metadata: params.metadata,
+      ...(params.ipAddress !== undefined && { ip_address: params.ipAddress }),
     },
   })
 }
