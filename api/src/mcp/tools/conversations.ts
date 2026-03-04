@@ -5,6 +5,7 @@
  */
 import { z } from 'zod'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp'
+import { Prisma } from '@prisma/client'
 import { prisma } from '../../db'
 
 export function registerConversationTools(server: McpServer): void {
@@ -53,11 +54,11 @@ export function registerConversationTools(server: McpServer): void {
         conversation_id: string
         role: 'user' | 'assistant'
         content: string
-        citations?: unknown
+        citations?: Prisma.InputJsonValue
       } = { conversation_id, role, content }
 
       if (citations !== undefined) {
-        data.citations = JSON.parse(citations) as unknown
+        data.citations = JSON.parse(citations) as Prisma.InputJsonValue
       }
 
       const message = await prisma.message.create({ data })

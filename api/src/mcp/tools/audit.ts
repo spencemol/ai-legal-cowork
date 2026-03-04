@@ -5,6 +5,7 @@
  */
 import { z } from 'zod'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp'
+import { Prisma } from '@prisma/client'
 import { logEvent } from '../../services/audit'
 
 export function registerAuditTools(server: McpServer): void {
@@ -34,7 +35,7 @@ export function registerAuditTools(server: McpServer): void {
         action,
         resourceType: resource_type,
         resourceId: resource_id,
-        metadata: metadata !== undefined ? (JSON.parse(metadata) as Record<string, unknown>) : undefined,
+        metadata: metadata !== undefined ? (JSON.parse(metadata) as Prisma.InputJsonValue) : undefined,
         ipAddress: ip_address,
       })
       return { content: [{ type: 'text', text: JSON.stringify(auditLog) }] }
